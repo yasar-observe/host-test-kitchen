@@ -1,5 +1,7 @@
 PROVIDER ?= cloudformation
 
+DOCKER_CMD := $(shell docker buildx version >/dev/null 2>&1 && echo "buildx" || echo "build")
+
 IMAGE_NAME ?= test-kitchen
 CONTAINER_BASE_NAME ?= test-kitchen
 CONTAINER_NAME ?= $(CONTAINER_BASE_NAME)-$(PROVIDER)
@@ -23,7 +25,11 @@ docker/clean: docker/test/clean
 
 .PHONY: docker/build
 docker/build:
+ifeq ($(DOCKER_CMD),buildx)
+	docker buildx build --load --build-arg UID=$(UID) --build-arg GID=$(GID) -t $(IMAGE_NAME) .
+else
 	docker build --build-arg UID=$(UID) --build-arg GID=$(GID) -t $(IMAGE_NAME) .
+endif
 
 .PHONY: docker/%
 docker/%:

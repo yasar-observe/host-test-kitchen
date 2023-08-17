@@ -1,4 +1,3 @@
 #!/bin/bash -l
-
-source /home/observe/.rvm/scripts/rvm
+export PATH="/usr/local/bundle/bin:$PATH"
 exec "$@"

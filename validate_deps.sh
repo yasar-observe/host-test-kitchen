@@ -4,9 +4,9 @@ IFS=$'\n\t'
 
 declare -A DEPS
 
-DEPS=( [ruby]='3.0.0'
+DEPS=( [ruby]='3.2.2'
        [terraform]='v1.5.4'
-       [aws]='2.13.4'
+       [aws]='2.13.10'
        [bundler]='2.2.3'
 )
 
