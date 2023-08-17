@@ -1,0 +1,2 @@
+# Exclude all .env* files (e.g., .env, .env.production, .env.test, etc.)
+.env*

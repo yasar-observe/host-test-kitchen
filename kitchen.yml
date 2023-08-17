@@ -1,0 +1,38 @@
+---
+driver:
+  name: <%= ENV['PROVIDER'] %>
+  <% if ENV['PROVIDER'] == 'cloudformation' %>
+  stack_name: spec-test-<%= ENV['PROVIDER'] %>-<%= ENV['USER'] %>
+  template_file: cloudformation-aws-collection/templates/collection.yaml
+  capabilities: [CAPABILITY_IAM]
+  change_set_name: <%= ENV['USER'] %>-change-set
+  parameters:
+    ObserveCustomer: <%= ENV['OBSERVE_CUSTOMER'] %>
+    ObserveToken: <%= ENV['OBSERVE_TOKEN'] %>
+    ObserveDomain: <%= ENV['OBSERVE_DOMAIN'] %>
+  <% elsif ENV['PROVIDER'] == 'terraform' %>
+  root_module_directory: terraform-aws-collection/
+  command_timeout: 1200
+  variables:
+    observe_customer: "<%= ENV['OBSERVE_CUSTOMER'] %>"
+    observe_token: "<%= ENV['OBSERVE_TOKEN'] %>"
+    observe_domain: "<%= ENV['OBSERVE_DOMAIN'] %>"
+    name: spec-test-<%= ENV['PROVIDER'] %>-<%= ENV['USER'] %>
+  <% end %>
+
+provisioner:
+  name: <%= ENV.fetch('PROVIDER') %>
+
+platforms:
+  - name: aws
+
+transport:
+  name: exec
+
+verifier:
+  name: awspec
+  patterns:
+    - 'test/integration/base/verify/collection_spec.rb'
+
+suites:
+  - name: base
