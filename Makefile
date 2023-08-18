@@ -39,7 +39,12 @@ docker/%:
 docker/run: docker/build
 	@if [ -z "`docker ps -q -f name=$(CONTAINER_NAME)`" ]; then \
 		echo "Container is not running. Starting a new one."; \
-		docker run -it --rm \
+		if [ "$$CI" = "true" ]; then \
+			DOCKER_FLAGS="--rm"; \
+		else \
+			DOCKER_FLAGS="-it --rm"; \
+		fi; \
+		docker run $$DOCKER_FLAGS \
 		--name $(CONTAINER_NAME) \
 		-e PROVIDER=$(PROVIDER) \
 		-e AWS_REGION=$(AWS_REGION) \
@@ -55,8 +60,9 @@ docker/run: docker/build
 		$(IMAGE_NAME) $(DOCKER_COMMAND); \
 	else \
 		echo "Container is already running. Executing command inside the container."; \
-		docker exec -it $(CONTAINER_NAME) $(DOCKER_COMMAND); \
+		docker exec $(CONTAINER_NAME) $(DOCKER_COMMAND); \
 	fi
+
 
 .PHONY: test
 test: test/create test/verify
