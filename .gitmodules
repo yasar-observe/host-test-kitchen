@@ -1,6 +1,3 @@
 [submodule "cloudformation-aws-collection"]
 	path = cloudformation-aws-collection
 	url = git@github.com:observeinc/cloudformation-aws-collection.git
-[submodule "terraform-aws-collection"]
-	path = terraform-aws-collection
-	url = git@github.com:observeinc/terraform-aws-collection.git
