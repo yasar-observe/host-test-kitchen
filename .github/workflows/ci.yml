@@ -67,7 +67,10 @@ jobs:
           ghcr.io/${{ github.repository }}:${{ github.ref_name }}
         cache-to: type=gha,mode=max
 
-    - name: Run tests
+    - name: Provision test infrastructure
+      run: make docker/test/create
+
+    - name: Run spec tests
       run: make docker/test
 
     - name: Push Docker images
@@ -85,7 +88,7 @@ jobs:
           ghcr.io/${{ github.repository }}:${{ github.ref_name }}
         cache-to: type=gha,mode=max
 
-    - name: Teardown/Clean
+    - name: Teardown test infrastructure
       if: always()
       run: make docker/clean
       continue-on-error: true
