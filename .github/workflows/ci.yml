@@ -12,6 +12,15 @@ jobs:
       contents: write
       packages: write
 
+    env:
+      PROVIDER: cloudformation
+      OBSERVE_CUSTOMER: ${{ secrets.OBSERVE_CUSTOMER }}
+      OBSERVE_TOKEN: ${{ secrets.OBSERVE_TOKEN }}
+      OBSERVE_DOMAIN: ${{ secrets.OBSERVE_DOMAIN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      USER: github-action-${{ github.run_id }}
+
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -57,14 +66,6 @@ jobs:
 
     - name: Run tests
       run: make docker/test
-      env:
-        PROVIDER: cloudformation
-        OBSERVE_CUSTOMER: ${{ secrets.OBSERVE_CUSTOMER }}
-        OBSERVE_TOKEN: ${{ secrets.OBSERVE_TOKEN }}
-        OBSERVE_DOMAIN: ${{ secrets.OBSERVE_DOMAIN }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
 
     - name: Push Docker image
       if: success()
