@@ -36,7 +36,7 @@ docker/build:
 	@if [ -z "$(shell docker images -q $(IMAGE_NAME))" ]; then \
 		echo "Image does not exist. Building..."; \
 		if [ "$(DOCKER_CMD)" = "buildx" ]; then \
-			git_branch=$$(git rev-parse --abbrev-ref HEAD) && \
+			git_branch=$$(git rev-parse --abbrev-ref HEAD | sed 's/\//-/g') && \
 			docker buildx build --load \
 			--cache-from=$(IMAGE_REPO):latest \
 			--cache-from=$(IMAGE_REPO):main \
