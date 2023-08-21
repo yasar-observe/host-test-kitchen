@@ -127,7 +127,7 @@ jobs:
           ghcr.io/${{ github.repository }}:${{ github.ref_name }}
         cache-to: type=gha,mode=max
 
-    - name: Run spec tests
+    - name: Setup Infra and Run spc tests
       run: make docker/test
       env:
         PROVIDER: ${{ matrix.provider }}
@@ -146,12 +146,6 @@ jobs:
           ghcr.io/${{ github.repository }}:main
           ghcr.io/${{ github.repository }}:${{ github.ref_name }}
         cache-to: type=gha,mode=max
-
-    - name: Setup tmate session
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true
 
     - name: Teardown test infrastructure
       if: always()
