@@ -54,7 +54,7 @@ docker/run: docker/build
 		-e OBSERVE_DOMAIN=$(OBSERVE_DOMAIN) \
 		-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
 		-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) \
-		-e AWS_SESSION_TOKEN=$(AWS_SESSION_TOKEN) \
+		$(if $(AWS_SESSION_TOKEN),-e AWS_SESSION_TOKEN=$(AWS_SESSION_TOKEN),) \
 		-v $(PWD):/workdir \
 		-u $(UID):$(GID) \
 		$(IMAGE_NAME) $(DOCKER_COMMAND); \
@@ -62,7 +62,6 @@ docker/run: docker/build
 		echo "Container is already running. Executing command inside the container."; \
 		docker exec $(CONTAINER_NAME) $(DOCKER_COMMAND); \
 	fi
-
 
 .PHONY: test
 test: test/create test/verify

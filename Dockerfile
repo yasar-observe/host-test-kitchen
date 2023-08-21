@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     unzip \
     git \
+    less \
     sudo && apt-get clean
 
 # Accept the user ID and group ID as build arguments
