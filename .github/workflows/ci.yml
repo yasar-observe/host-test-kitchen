@@ -52,31 +52,38 @@ jobs:
         IMAGE_NAME=$(echo "${DOCKER_METADATA_OUTPUT_TAGS}" | head -n 1)
         echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
         
-    - name: Check if an image already exists
-      continue-on-error: true
-      run: docker pull $IMAGE_NAME
-
-    - name: Build Docker image
-      run: make docker/build
-
-    - name: Apply labels to Docker image
-      run: |
-        echo "FROM $IMAGE_NAME" > tmp.Dockerfile
-        LABELS=$(echo "${DOCKER_METADATA_OUTPUT_JSON}" | jq -r '.labels | to_entries[] | [.key, .value] | join("=")')
-        for label in $LABELS; do
-          docker build -f tmp.Dockerfile -t $IMAGE_NAME --label $label .
-        done
+    - name: Build docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        load: true
+        push: false
+        tags: ${{ steps.docker_metadata.outputs.tags }}
+        labels: ${{ steps.docker_metadata.outputs.labels }}
+        cache-from: |
+          type=gha
+          ghcr.io/${{ github.repository }}:latest
+          ghcr.io/${{ github.repository }}:main
+          ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+        cache-to: type=gha,mode=max
 
     - name: Run tests
       run: make docker/test
 
     - name: Push Docker images
       if: success()
-      run: |
-        IFS=$'\n' read -ra TAGS <<< "$DOCKER_METADATA_OUTPUT_TAGS"
-        for tag in "${TAGS[@]}"; do
-          docker push "$tag"
-        done
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.docker_metadata.outputs.tags }}
+        labels: ${{ steps.docker_metadata.outputs.labels }}
+        cache-from: |
+          type=gha
+          ghcr.io/${{ github.repository }}:latest
+          ghcr.io/${{ github.repository }}:main
+          ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+        cache-to: type=gha,mode=max
 
     - name: Teardown/Clean
       if: always()
