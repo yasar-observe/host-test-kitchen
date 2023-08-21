@@ -81,3 +81,4 @@ jobs:
     - name: Teardown/Clean
       if: always()
       run: make docker/clean
+      continue-on-error: true
