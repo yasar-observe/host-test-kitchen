@@ -25,11 +25,16 @@ docker/clean: docker/test/clean
 
 .PHONY: docker/build
 docker/build:
-ifeq ($(DOCKER_CMD),buildx)
-	docker buildx build --load --build-arg UID=$(UID) --build-arg GID=$(GID) -t $(IMAGE_NAME) .
-else
-	docker build --build-arg UID=$(UID) --build-arg GID=$(GID) -t $(IMAGE_NAME) .
-endif
+	@if [ -z "$(shell docker images -q $(IMAGE_NAME))" ]; then \
+		echo "Image does not exist. Building..."; \
+		if [ "$(DOCKER_CMD)" = "buildx" ]; then \
+			docker buildx build --load --build-arg UID=$(UID) --build-arg GID=$(GID) -t $(IMAGE_NAME) .; \
+		else \
+			docker build --build-arg UID=$(UID) --build-arg GID=$(GID) -t $(IMAGE_NAME) .; \
+		fi; \
+	else \
+		echo "Image already exists. Skipping build."; \
+	fi
 
 .PHONY: docker/%
 docker/%:
