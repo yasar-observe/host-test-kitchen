@@ -6,7 +6,7 @@ on:
       - chore/ci
 
 env:
-  USER: github-action-${{ github.run_id }}
+  USER: gha-${{ github.run_id }}
 
 jobs:
   build:
@@ -137,7 +137,7 @@ jobs:
       uses: docker/build-push-action@v4
       with:
         context: .
-        push: true
+        push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.docker_metadata.outputs.tags }}
         labels: ${{ steps.docker_metadata.outputs.labels }}
         cache-from: |
@@ -146,6 +146,12 @@ jobs:
           ghcr.io/${{ github.repository }}:main
           ghcr.io/${{ github.repository }}:${{ github.ref_name }}
         cache-to: type=gha,mode=max
+
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
 
     - name: Teardown test infrastructure
       if: always()
