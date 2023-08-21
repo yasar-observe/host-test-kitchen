@@ -6,21 +6,8 @@ on:
       - chore/ci
 
 jobs:
-  build_and_test:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-
-    env:
-      PROVIDER: cloudformation
-      OBSERVE_CUSTOMER: ${{ secrets.OBSERVE_CUSTOMER }}
-      OBSERVE_TOKEN: ${{ secrets.OBSERVE_TOKEN }}
-      OBSERVE_DOMAIN: ${{ secrets.OBSERVE_DOMAIN }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      USER: github-action-${{ github.run_id }}
-
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -47,14 +34,18 @@ jobs:
           type=ref,event=branch
           type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Set IMAGE_NAME environment variable
+    - name: Set the IMAGE_NAME variable
       run: |
-        IMAGE_NAME=$(echo "${DOCKER_METADATA_OUTPUT_TAGS}" | head -n 1)
-        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-        
-    - name: Check if an image already exists
-      continue-on-error: true
-      run: docker pull $IMAGE_NAME
+        IMAGE_NAME=$(echo "$DOCKER_METADATA_OUTPUT_TAGS" | tr '\n' ',' | awk -F ',' '{print $1}')        
+        # Set the IMAGE_NAME for current and future steps
+        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_STATE    
+        # Also set as output for next stage
+        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_OUTPUT
+                
+    - name: Pull the Docker Image
+      run: |
+        echo "Pulling $IMAGE_NAME"
+        docker pull $IMAGE_NAME
 
     - name: Build Docker image
       run: make docker/build
@@ -67,8 +58,67 @@ jobs:
           docker build -f tmp.Dockerfile -t $IMAGE_NAME --label $label .
         done
 
+    - name: Export Docker image to tarball
+      run: docker save -o /tmp/myimage.tar $IMAGE_NAME
+
+    - name: Upload Docker image as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: $IMAGE_NAME
+        path: /tmp/$IMAGE_NAME.tar
+
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    env:
+      PROVIDER: cloudformation
+      OBSERVE_CUSTOMER: ${{ secrets.OBSERVE_CUSTOMER }}
+      OBSERVE_TOKEN: ${{ secrets.OBSERVE_TOKEN }}
+      OBSERVE_DOMAIN: ${{ secrets.OBSERVE_DOMAIN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      USER: github-action-${{ github.run_id }}
+      IMAGE_NAME: ${{ needs.build.outputs.image_name }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+    
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Download Docker image artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: "$IMAGE_NAME"
+        path: /tmp/$IMAGE_NAME.tar
+
     - name: Run tests
       run: make docker/test
+
+    - name: Teardown/Clean
+      if: always()
+      run: make docker/clean
+      continue-on-error: true
+
+    - name: Metadata for Docker Image
+      id: docker_metadata
+      uses: docker/metadata-action@v4
+      with:
+        images: ghcr.io/${{ github.repository }}
+        tags: |
+          type=sha,priority=1001
+          type=ref,event=branch
+          type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Push Docker images
       if: success()
@@ -77,8 +127,3 @@ jobs:
         for tag in "${TAGS[@]}"; do
           docker push "$tag"
         done
-
-    - name: Teardown/Clean
-      if: always()
-      run: make docker/clean
-      continue-on-error: true
