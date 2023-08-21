@@ -1,9 +1,13 @@
-name: PR Build Image
+name: Run AWS Spec Tests
 
 on:
   push:
     branches:
-      - chore/ci
+      - main
+  pull_request:
+    branches:
+      - main
+
 
 env:
   USER: gha-${{ github.run_id }}

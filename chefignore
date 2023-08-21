@@ -1,2 +1,4 @@
 .kitchen
 kitchen*.yml
+.env
+.env*
