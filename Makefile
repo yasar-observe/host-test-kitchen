@@ -2,7 +2,12 @@ PROVIDER ?= cloudformation
 
 DOCKER_CMD := $(shell docker buildx version >/dev/null 2>&1 && echo "buildx" || echo "build")
 
-IMAGE_NAME ?= test-kitchen
+GIT_REMOTE := $(shell git remote get-url origin | sed -e 's/.*[\/:]\([^/]*\/[^/]*\)\.git/\1/')
+DOCKER_REGISTRY ?= ghcr.io
+IMAGE_REPO ?= $(DOCKER_REGISTRY)/$(GIT_REMOTE)
+GIT_SHA := $(shell git rev-parse --short HEAD)
+IMAGE_TAG ?= $(GIT_SHA)
+IMAGE_NAME ?= $(IMAGE_REPO):$(IMAGE_TAG)
 CONTAINER_BASE_NAME ?= test-kitchen
 CONTAINER_NAME ?= $(CONTAINER_BASE_NAME)-$(PROVIDER)
 UID := $(shell id -u)
@@ -17,6 +22,9 @@ AWS_SECRET_ACCESS_KEY := $(AWS_SECRET_ACCESS_KEY)
 AWS_SESSION_TOKEN := $(AWS_SESSION_TOKEN)
 AWS_REGION ?= us-east-1
 
+debug:
+	@echo "${GIT_REMOTE}"
+
 .PHONY: docker/clean
 docker/clean: docker/test/clean
 	docker kill $(CONTAINER_NAME) || true
@@ -28,7 +36,14 @@ docker/build:
 	@if [ -z "$(shell docker images -q $(IMAGE_NAME))" ]; then \
 		echo "Image does not exist. Building..."; \
 		if [ "$(DOCKER_CMD)" = "buildx" ]; then \
-			docker buildx build --load --build-arg UID=$(UID) --build-arg GID=$(GID) -t $(IMAGE_NAME) .; \
+			git_branch=$$(git rev-parse --abbrev-ref HEAD) && \
+			docker buildx build --load \
+			--cache-from=$(IMAGE_REPO):latest \
+			--cache-from=$(IMAGE_REPO):main \
+			--cache-from=$(IMAGE_REPO):$$git_branch \
+			--build-arg UID=$(UID) \
+			--build-arg GID=$(GID) \
+			-t $(IMAGE_NAME) .; \
 		else \
 			docker build --build-arg UID=$(UID) --build-arg GID=$(GID) -t $(IMAGE_NAME) .; \
 		fi; \
