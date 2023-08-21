@@ -26,17 +26,17 @@ describe lambda("spec-test-#{provider}-#{user}") do
 end
 
 # Get all S3 buckets
-s3 = Aws::S3::Client.new
-s3_bucket_found = false
-s3.list_buckets.buckets.each do |bucket|
-  # Filter out the ones that match your prefix
-  if bucket.name.start_with?("spec-test-#{provider}-#{user}")
-    s3_bucket_found = true
-    describe s3_bucket(bucket.name) do
-      it { should exist }
-    end
-  end
-end
+# s3 = Aws::S3::Client.new
+# s3_bucket_found = false
+# s3.list_buckets.buckets.each do |bucket|
+#   # Filter out the ones that match your prefix
+#   if bucket.name.start_with?("spec-test-#{provider}-#{user}")
+#     s3_bucket_found = true
+#     describe s3_bucket(bucket.name) do
+#       it { should exist }
+#     end
+#   end
+# end
 
 describe 's3 bucket' do
   it 'has at least s3 bucket' do

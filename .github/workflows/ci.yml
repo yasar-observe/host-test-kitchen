@@ -26,14 +26,6 @@ jobs:
       uses: actions/checkout@v3
       with:
         submodules: true
-
-    - name: Cache Docker layers
-      uses: actions/cache@v2
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
     
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v2
@@ -53,30 +45,43 @@ jobs:
         tags: |
           type=ref,event=branch
 
-    - name: Build Docker image (without pushing)
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        push: false
-        load: true
-        tags: ${{ steps.docker_metadata.outputs.tags }}
-        labels: ${{ steps.docker_metadata.outputs.labels }}
-        cache-from: type=local,src=/tmp/.buildx-cache
-        cache-to: type=local,dest=/tmp/.buildx-cache
+    - name: Set IMAGE_NAME environment variable
+      run: |
+        IMAGE_NAME=$(echo "${DOCKER_METADATA_OUTPUT_TAGS}" | awk -F '\n' '{print $1}')
+        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
+    - name: Check if an image already exists
+      continue-on-error: true
+      run: docker pull $IMAGE_NAME
+
+    - name: Build Docker image
+      run: make docker/build
+
+    - name: Apply labels to Docker image
+      run: |
+        echo "FROM $IMAGE_NAME" > tmp.Dockerfile
+        LABELS=$(echo "${DOCKER_METADATA_OUTPUT_JSON}" | jq -r '.labels | to_entries[] | [.key, .value] | join("=")')
+        for label in $LABELS; do
+          docker build -f tmp.Dockerfile -t $IMAGE_NAME --label $label .
+        done
+
+    - name: Tag Docker image
+      run: |
+        # Extract tags and apply them
+        for tag in $DOCKER_METADATA_OUTPUT_TAGS; do
+          docker tag $IMAGE_NAME $tag
+        done
+    
     - name: Run tests
       run: make docker/test
 
-    - name: Push Docker image
+    - name: Push Docker images
       if: success()
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.docker_metadata.outputs.tags }}
-        labels: ${{ steps.docker_metadata.outputs.labels }}
-        cache-from: type=local,src=/tmp/.buildx-cache
-        cache-to: type=local,dest=/tmp/.buildx-cache
+      run: |
+        for tag in $DOCKER_METADATA_OUTPUT_TAGS; do
+          docker push $tag;
+        done
+
 
     - name: Teardown/Clean
       if: always()
