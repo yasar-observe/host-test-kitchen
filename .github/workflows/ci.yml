@@ -23,6 +23,7 @@ jobs:
     steps:
     - id: check
       run: |
+        # If the OBSERVE_CUSTOMER secret is MIA we can't run tests
         if [[ -z "$OBSERVE_CUSTOMER" ]]; then
           echo "can-write=false" >> $GITHUB_OUTPUT
         else
