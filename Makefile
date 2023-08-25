@@ -104,7 +104,16 @@ test/verify: test/create
 	kitchen verify
 
 .PHONY: test/clean
-test/clean: test/prerequisites
+test/clean:
 	kitchen destroy || true
 	rm -rf .kitchen/* || true
 	aws logs delete-log-group --log-group-name /aws/lambda/spec-test-$(PROVIDER)-$(USER) || true
+
+.PHONY: check_aws_quota
+check_aws_quota:
+	@output=$$($(MAKE) docker/run DOCKER_COMMAND='aws cloudtrail describe-trails --query "length(trailList)" --output text'); \
+	if [ "$$?" -ne "0" ]; then exit 1; fi; \
+	if [ "$$output" -ge "3" ]; then \
+		echo "Number of CloudTrail trails exceeds quota."; \
+		exit 1; \
+	fi
