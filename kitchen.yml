@@ -1,42 +1,39 @@
----
 driver:
-  name: <%= ENV['PROVIDER'] %>
-  <% if ENV['PROVIDER'] == 'cloudformation' %>
-  stack_name: <%= ENV['PROVIDER'] %>-<%= ENV['USER'] %>
-  template_file: cloudformation-aws-collection/templates/collection.yaml
-  capabilities: [CAPABILITY_IAM]
-  change_set_name: <%= ENV['USER'] %>-change-set
-  parameters:
-    ObserveCustomer: <%= ENV['OBSERVE_CUSTOMER'] %>
-    ObserveToken: <%= ENV['OBSERVE_TOKEN'] %>
-    ObserveDomain: <%= ENV['OBSERVE_DOMAIN'] %>
-  <% elsif ENV['PROVIDER'] == 'terraform' %>
-  root_module_directory: terraform-aws-collection/
-  command_timeout: 1200
-  variables:
-    observe_customer: "<%= ENV['OBSERVE_CUSTOMER'] %>"
-    observe_token: "<%= ENV['OBSERVE_TOKEN'] %>"
-    observe_domain: "<%= ENV['OBSERVE_DOMAIN'] %>"
-    name: <%= ENV['PROVIDER'] %>-<%= ENV['USER'] %>
-  <% end %>
+  name: ec2
+  # aws_ssh_key_id: YOUR_AWS_SSH_KEY_ID
+  region: us-west-2
+  # availability_zone: YOUR_AWS_AVAILABILITY_ZONE
+  instance_type: t2.micro
+  # subnet_id: 	subnet-03560583eab482027
+  # security_group_ids: YOUR_AWS_SECURITY_GROUP_IDS
+
 
 provisioner:
-  name: <%= ENV.fetch('PROVIDER') %>
+  name: shell
+  arguments: ['--observe_host', 'redacted', '--observe_token', 'redacted']    
+  # inline: |
+  #   #!/bin/bash
+  #   sudo apt-get update
 
 platforms:
-  - name: aws
-
-transport:
-  name: exec
-
-lifecycle:
-  post_destroy:
-    - rspec -c -f documentation --default-path '/workdir'  -P 'test/integration/destruction/verify/destruction_spec.rb'
+  # - name: ubuntu-22.04
+  - name: amazon-2
+    driver:
+      image_id: ami-04288abc8d2000768
+  # - name: amazon-linux-2023
+  # - name: rhel-9
+  # - name: debian-12
+    # driver:
+    #   image_id: ami-xxxxxxxxxxxxxxxxx
+    transport:
+      upload_path: /tmp
 
 verifier:
-  name: awspec
-  patterns:
-    - 'test/integration/base/verify/collection_spec.rb'
+  name: inspec
 
 suites:
-  - name: base
+  - name: default
+    verifier:
+      inspec_tests:
+        - test/integration/default
+    attributes:
